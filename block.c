@@ -6,21 +6,26 @@
 #define BLOCKWIDTH 4
 #define BLOCKHEIGHT 4
 #define BLOCK (BLOCKWIDTH * BLOCKHEIGHT)
-#define ELEMENT(i, j) (((i) * BLOCKWIDTH) + (j))
+#define ELEMENT(i, j) (((j) * BLOCKWIDTH) + (i))
 #define BLOCKSIZE 80
 #define MARGIN 15
 #define WIDTH (BLOCKSIZE * BLOCKWIDTH + (MARGIN * 2))
 #define HEIGHT (BLOCKSIZE * BLOCKHEIGHT + (MARGIN * 2))
 
-GLuint img[BLOCK];
-pngInfo info[BLOCK];
-
 void Display(void);
 void Reshape(int, int);
 void DisplayBlock();
 void PutSprite(int, int, int, pngInfo *);
+void Mouse(int, int, int, int);
+void IsMove(int, int);
+void Move(int, int, int, int);
+void swap(int *, int *);
+
+GLuint img[BLOCK];
+pngInfo info[BLOCK];
 
 int block[BLOCK];
+
 
 int main(int argc, char const *argv[]) {
   glutInit(&argc, argv);
@@ -50,6 +55,7 @@ int main(int argc, char const *argv[]) {
 
   glutDisplayFunc(Display);
   glutReshapeFunc(Reshape);
+  glutMouseFunc(Mouse);
 
   glutMainLoop();
 
@@ -77,16 +83,18 @@ void Display(void)
     glFlush();
 }
 
+
 void DisplayBlock()
 {
   int i, j, num;
-  for (i = 0; i < BLOCKWIDTH; i++) {
-    for (j = 0; j < BLOCKHEIGHT; j++) {
+  for (j = 0; j < BLOCKWIDTH; j++) {
+    for (i = 0; i < BLOCKHEIGHT; i++) {
       num = block[ELEMENT(i, j)];
-      PutSprite(img[num], MARGIN + BLOCKSIZE * j, MARGIN + BLOCKSIZE * i, &info[num]);
+      PutSprite(img[num], MARGIN + BLOCKSIZE * i, MARGIN + BLOCKSIZE * j, &info[num]);
     }
   }
 }
+
 
 void PutSprite(int num, int x, int y, pngInfo *info)
 {
@@ -119,4 +127,69 @@ void PutSprite(int num, int x, int y, pngInfo *info)
 
     glDisable(GL_TEXTURE_2D);
     glPopMatrix();
+}
+
+
+void Mouse(int b, int s, int x, int y)
+{
+  if (b == GLUT_LEFT_BUTTON)
+  {
+    if (s == GLUT_UP) IsMove(x, y);
+  }
+}
+
+
+void IsMove(int x, int y)
+{
+  int result = 0;
+  int i;
+  if (block[ELEMENT((x - MARGIN) / BLOCKSIZE, (y - MARGIN) / BLOCKSIZE)] != 0) {
+    for (i = 0; i < BLOCKWIDTH; i++) {
+      if (block[ELEMENT(i, ((y - MARGIN) / BLOCKSIZE))] == 0) {
+        result = 1;
+        Move(((x - MARGIN) / BLOCKSIZE), ((y - MARGIN) / BLOCKSIZE), i, ((y - MARGIN) / BLOCKSIZE));
+        break;
+      }
+    }
+    if (result == 0) {
+      for (i = 0; i < BLOCKHEIGHT; i++) {
+        if (block[ELEMENT(((x - MARGIN) / BLOCKSIZE), i)] == 0) {
+          result = 1;
+          Move(((x - MARGIN) / BLOCKSIZE), ((y - MARGIN) / BLOCKSIZE), ((x - MARGIN) / BLOCKSIZE), i);
+          break;
+        }
+      }
+    }
+  }
+}
+
+
+void Move(int x, int y, int zeroi, int zeroj)
+{
+  int i;
+  if (x == zeroi) {
+    for (i = 0; i < abs(y - zeroj); i++) {
+      if (y < zeroj)
+        swap(&block[ELEMENT(x, zeroj - i)], &block[ELEMENT(x, zeroj - (i + 1))]);
+      if (y > zeroj)
+        swap(&block[ELEMENT(x, zeroj + i)], &block[ELEMENT(x, zeroj + (i + 1))]);
+    }
+  }
+  else if (y == zeroj) {
+    for (i = 0; i < abs(x - zeroi); i++) {
+      if (x < zeroi)
+        swap(&block[ELEMENT(zeroi - i, y)], &block[ELEMENT(zeroi - (i + 1), y)]);
+      if (x > zeroi)
+        swap(&block[ELEMENT(zeroi + i, y)], &block[ELEMENT(zeroi + (i + 1), y)]);
+    }
+  }
+  glutPostRedisplay();
+}
+
+
+void swap(int *a, int *b)
+{
+  int t = *a;
+  *a = *b;
+  *b = t;
 }
