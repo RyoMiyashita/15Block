@@ -2,7 +2,9 @@
 #include <glpng/glpng.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
+#include <time.h>
 
 #define BLOCKWIDTH 4
 #define BLOCKHEIGHT 4
@@ -18,18 +20,22 @@ void Reshape(int, int);
 void Timer(int);
 void DisplayBlock();
 void DisplayMenu();
+void DisplayEnd();
 void PutSprite(int, int, int, pngInfo *);
 void Mouse(int, int, int, int);
 void IsMove(int, int);
 void Move(int, int, int, int);
 void swap(int *, int *);
 void Keyboard(unsigned char, int, int);
+void checkEnd();
 
 GLuint img[BLOCK];
 pngInfo info[BLOCK];
 
 int block[BLOCK];
+int cnt = 0;
 char menuFlag = 1;
+char endFlag = 0;
 double theta = (3.0 / 4.0) * M_PI;
 
 
@@ -63,6 +69,8 @@ int main(int argc, char const *argv[]) {
   }
   block[ELEMENT(BLOCKWIDTH - 1, BLOCKHEIGHT - 1)] = 0;
 
+  srand(time(NULL));
+
   glutDisplayFunc(Display);
   glutReshapeFunc(Reshape);
   glutMouseFunc(Mouse);
@@ -90,10 +98,15 @@ void Display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (menuFlag == 1) {
+    if (menuFlag) {
       DisplayMenu();
     } else {
-      DisplayBlock();
+      checkEnd();
+      if (endFlag) {
+        DisplayEnd();
+      } else {
+        DisplayBlock();
+      }
     }
 
     glFlush();
@@ -176,6 +189,38 @@ void DisplayMenu()
   glPopMatrix();
 }
 
+void DisplayEnd()
+{
+  int i;
+  int xc = glutGet(GLUT_WINDOW_WIDTH)/2;
+  int yc = glutGet(GLUT_WINDOW_HEIGHT)/2;
+  char clearStr[7] = "Clear!";
+  char moveStr[11];
+  char menuStr[23] = "press space to go menu";
+
+  if (cnt > 999) {
+    cnt = 999;
+  }
+  glColor3ub(46, 255, 0);
+  glRasterPos2i(xc - 25, yc - 30);
+  for (i = 0; i < strlen(clearStr); i++) {
+    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, clearStr[i]);
+  }
+
+  glColor3ub(255, 255, 255);
+  glRasterPos2i(xc - 45, yc + 10);
+  sprintf(moveStr, "Move : %03d", cnt);
+  for (i = 0; i < strlen(moveStr); i++) {
+    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, moveStr[i]);
+  }
+
+  glColor3ub(255, 255, 255);
+  glRasterPos2i(xc - 100, yc + 50);
+  for (i = 0; i < strlen(menuStr); i++) {
+    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, menuStr[i]);
+  }
+}
+
 
 void PutSprite(int num, int x, int y, pngInfo *info)
 {
@@ -215,7 +260,11 @@ void Mouse(int b, int s, int x, int y)
 {
   if (b == GLUT_LEFT_BUTTON)
   {
-    if (s == GLUT_UP) IsMove(x, y);
+    if (s == GLUT_UP) {
+      if (menuFlag == 0 && endFlag == 0) {
+        IsMove(x, y);
+      }
+    }
   }
 }
 
@@ -264,6 +313,7 @@ void Move(int x, int y, int zeroi, int zeroj)
         swap(&block[ELEMENT(zeroi + i, y)], &block[ELEMENT(zeroi + (i + 1), y)]);
     }
   }
+  cnt++;
   glutPostRedisplay();
 }
 
@@ -282,12 +332,34 @@ void Keyboard(unsigned char key, int x, int y) {
     exit(0);
   }
   if (key == 32) {
-    if (menuFlag == 1)
+    if (menuFlag) {
       menuFlag = 0;
-    for (i = 0; i < BLOCK; i++)
-    {
+      cnt = 0;
+      for (i = 0; i < BLOCK; i++)
+      {
         int j = rand()%BLOCK;
         swap(&block[i], &block[j]);
+      }
+    } else if (endFlag) {
+      endFlag = 0;
+      menuFlag = 1;
+      glutTimerFunc(1, Timer, 0);
+      glutPostRedisplay();
     }
   }
+}
+
+void checkEnd()
+{
+  int result = 1;
+
+  int i;
+
+  for (i = 1; i < BLOCK; i++) {
+    if (block[i - 1] != i) {
+      result = 0;
+    }
+  }
+
+  endFlag = result;
 }
